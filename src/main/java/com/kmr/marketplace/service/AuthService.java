@@ -2,6 +2,7 @@ package com.kmr.marketplace.service;
 
 import com.kmr.marketplace.dto.AuthResponse;
 import com.kmr.marketplace.dto.LoginRequest;
+import com.kmr.marketplace.security.OtpStore;
 import com.kmr.marketplace.dto.RegisterRequest;
 import com.kmr.marketplace.entity.User;
 import com.kmr.marketplace.entity.UserRole;
@@ -12,6 +13,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+
 @Service
 public class AuthService {
 
@@ -19,20 +21,27 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final OtpStore otpStore;
 
     public AuthService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
                        JwtService jwtService,
-                       AuthenticationManager authenticationManager) {
+                       AuthenticationManager authenticationManager,
+                       OtpStore otpStore) {
         this.userRepository      = userRepository;
         this.passwordEncoder     = passwordEncoder;
         this.jwtService          = jwtService;
         this.authenticationManager = authenticationManager;
+        this.otpStore = otpStore;
     }
 
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.email())) {
             throw new IllegalArgumentException("Email already registered");
+        }
+
+        if (!otpStore.isOtpVerified(request.phone())) {
+            throw new IllegalArgumentException("Phone number not verified. Please complete OTP verification.");
         }
 
         User user = User.builder()
