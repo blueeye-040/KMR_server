@@ -136,6 +136,18 @@ CREATE TABLE order_items (
   quantity        INT           NOT NULL,
   price           DECIMAL(10,2) NOT NULL
 );
+create table banners (
+  id bigserial not null,
+  title character varying(200) null,
+  subtitle character varying(300) null,
+  image_url text null,
+  bg_color_hex character varying(7) null,
+  redirect_type character varying(50) null,
+  redirect_id bigint null,
+  sort_order integer null default 0,
+  active boolean null default true,
+  constraint banners_pkey primary key (id)
+);
 
 CREATE INDEX idx_products_category    ON products(category_id);
 CREATE INDEX idx_products_brand       ON products(brand_id);
@@ -747,3 +759,49 @@ CREATE INDEX idx_cart_user      ON cart(user_id);
 CREATE INDEX idx_wishlist_user  ON wishlist(user_id);
 CREATE INDEX idx_orders_user    ON orders(user_id);
 CREATE INDEX idx_addresses_user ON addresses(user_id);
+
+-- ============================================================
+-- Phase 2 — Reviews & product rating columns
+-- Run this block in Supabase after the schema above
+-- ============================================================
+
+-- Add rating summary columns to products for fast list display
+ALTER TABLE products
+  ADD COLUMN IF NOT EXISTS rating_avg   DECIMAL(3,2) DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS review_count INT          DEFAULT 0;
+
+-- Reviews table (one review per user per product)
+CREATE TABLE IF NOT EXISTS reviews (
+  id                BIGSERIAL    PRIMARY KEY,
+  product_id        BIGINT       NOT NULL REFERENCES products(id)    ON DELETE CASCADE,
+  user_id           BIGINT       NOT NULL REFERENCES users(id)       ON DELETE CASCADE,
+  shop_product_id   BIGINT       REFERENCES shop_products(id)        ON DELETE SET NULL,
+  rating            SMALLINT     NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  title             VARCHAR(200),
+  body              TEXT,
+  verified_purchase BOOLEAN      DEFAULT false,
+  helpful_count     INT          DEFAULT 0,
+  created_at        TIMESTAMPTZ  DEFAULT NOW(),
+  UNIQUE(user_id, product_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_reviews_product ON reviews(product_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_reviews_user    ON reviews(user_id);
+CREATE INDEX IF NOT EXISTS idx_reviews_rating  ON reviews(product_id, rating);
+
+-- Trigger: keep rating_avg + review_count in sync automatically
+CREATE OR REPLACE FUNCTION update_product_rating()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  UPDATE products
+  SET rating_avg   = (SELECT COALESCE(AVG(rating), 0) FROM reviews WHERE product_id = COALESCE(NEW.product_id, OLD.product_id)),
+      review_count = (SELECT COUNT(*)                  FROM reviews WHERE product_id = COALESCE(NEW.product_id, OLD.product_id))
+  WHERE id = COALESCE(NEW.product_id, OLD.product_id);
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_update_product_rating ON reviews;
+CREATE TRIGGER trg_update_product_rating
+  AFTER INSERT OR UPDATE OR DELETE ON reviews
+  FOR EACH ROW EXECUTE FUNCTION update_product_rating();
