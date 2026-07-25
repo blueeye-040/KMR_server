@@ -58,6 +58,11 @@
             <artifactId>sns</artifactId>
             <version>2.25.40</version>
         </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <version>2.25.40</version>
+        </dependency>
 
         <dependency>
             <groupId>me.paulschwarz</groupId>

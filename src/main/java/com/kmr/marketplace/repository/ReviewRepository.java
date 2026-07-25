@@ -18,7 +18,7 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     List<Object[]> ratingBreakdown(@Param("pid") Long productId);
 
     @Query("SELECT COALESCE(AVG(CAST(r.rating AS double)), 0.0), COUNT(r) FROM Review r WHERE r.product.id = :pid")
-    Object[] avgAndCount(@Param("pid") Long productId);
+    List<Object[]> avgAndCount(@Param("pid") Long productId);
 
     boolean existsByProductIdAndUserId(Long productId, Long userId);
 }

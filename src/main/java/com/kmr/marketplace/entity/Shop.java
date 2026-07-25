@@ -27,6 +27,9 @@ public class Shop {
     private long totalSales;
     private boolean approved;
 
+    @Column(name = "is_official")
+    private boolean isOfficial;
+
     @Column(name = "created_at", updatable = false)
     private java.time.OffsetDateTime createdAt;
 
@@ -44,7 +47,8 @@ public class Shop {
     public BigDecimal getRating() { return rating; }
     public long getTotalSales() { return totalSales; }
     public boolean isApproved() { return approved; }
-    
+    public boolean isOfficial() { return isOfficial; }
+
     @PrePersist
     void prePersist() { this.createdAt = java.time.OffsetDateTime.now(); }
 
@@ -62,4 +66,5 @@ public class Shop {
     public void setRating(BigDecimal rating) { this.rating = rating; }
     public void setTotalSales(long totalSales) { this.totalSales = totalSales; }
     public void setApproved(boolean approved) { this.approved = approved; }
+    public void setIsOfficial(boolean isOfficial) { this.isOfficial = isOfficial; }
 }

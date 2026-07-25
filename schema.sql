@@ -805,3 +805,50 @@ DROP TRIGGER IF EXISTS trg_update_product_rating ON reviews;
 CREATE TRIGGER trg_update_product_rating
   AFTER INSERT OR UPDATE OR DELETE ON reviews
   FOR EACH ROW EXECUTE FUNCTION update_product_rating();
+
+-- ============================================================
+-- Phase 3 — KMR Official Store
+-- Run this block in Supabase after Phase 2
+-- ============================================================
+
+-- Mark shops that are owned by the platform itself
+ALTER TABLE shops ADD COLUMN IF NOT EXISTS is_official BOOLEAN DEFAULT false;
+
+-- Insert KMR Store as the platform's own shop (id = 5)
+INSERT INTO shops (id, name, owner_name, city, logo_url, tagline, rating, total_sales, is_official, approved)
+VALUES (5, 'KMR Store', 'KMR Marketplace', 'Chennai',
+        'https://picsum.photos/seed/shop-kmr/100/100',
+        'KMR Official Marketplace Store', 5.0, 100000, true, true)
+ON CONFLICT (id) DO UPDATE
+  SET name = EXCLUDED.name, is_official = EXCLUDED.is_official,
+      tagline = EXCLUDED.tagline, rating = EXCLUDED.rating;
+
+SELECT setval('shops_id_seq', (SELECT MAX(id) FROM shops));
+
+-- KMR Store pricing — competitive with guaranteed 1-day delivery
+INSERT INTO shop_products (shop_id, product_id, mrp, selling_price, discount_percent, stock, delivery_days, available) VALUES
+-- Electronics
+(5,  1, 1299,   929, 29, 500, 1, true),   -- boAt Airdopes 141
+(5,  3, 5999,  4299, 28, 200, 1, true),   -- JBL Tune 760NC
+(5,  6, 19900, 16799, 16, 100, 1, true),  -- Apple AirPods 3
+(5, 10, 2299,  1699, 26, 300, 1, true),   -- OnePlus Nord Buds 2
+(5, 14, 5999,  3699, 38, 300, 1, true),   -- Amazon Fire TV Stick 4K
+-- Mobiles
+(5, 16, 29999, 24299, 19, 200, 1, true),  -- Samsung Galaxy A35 5G
+(5, 17, 74999, 63999, 15,  80, 1, true),  -- Samsung Galaxy S24
+(5, 18, 79900, 71499, 11,  60, 1, true),  -- iPhone 15
+(5, 19, 89900, 80299, 11,  50, 1, true),  -- iPhone 16
+(5, 22, 27999, 21499, 23, 150, 1, true),  -- Redmi Note 14 Pro
+(5, 23, 24999, 20499, 18, 120, 1, true),  -- POCO X7 Pro
+-- Laptops
+(5, 26, 114900, 106999, 7,  60, 1, true), -- MacBook Air M3
+(5, 28,  70990, 53999, 24,  80, 1, true), -- Dell Inspiron 15
+(5, 34,  99990, 80499, 20,  40, 1, true), -- Lenovo Legion 5
+(5, 35, 129990, 108999, 16, 30, 1, true), -- ASUS ROG Strix G16
+-- Fashion
+(5, 47, 5999,  3799, 37, 200, 1, true),   -- Puma Shoes
+(5, 48, 14999, 10799, 28, 100, 1, true)   -- Adidas Ultraboost
+ON CONFLICT (shop_id, product_id) DO NOTHING;
+
+-- rest
+

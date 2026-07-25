@@ -73,7 +73,8 @@ public class ProductDetailService {
                 sp.getSellingPrice().doubleValue(),
                 sp.getDiscountPercent(),
                 sp.getStock(),
-                sp.getDeliveryDays()
+                sp.getDeliveryDays(),
+                sp.getShop().isOfficial()
         )).toList();
 
         // 4. Reviews (top 10, newest first)
@@ -93,7 +94,8 @@ public class ProductDetailService {
                 )).toList();
 
         // 5. Rating summary
-        Object[] avgCount = reviewRepo.avgAndCount(productId);
+        List<Object[]> avgCountList = reviewRepo.avgAndCount(productId);
+        Object[] avgCount = avgCountList.isEmpty() ? new Object[]{null, null} : avgCountList.get(0);
         double ratingAvg  = avgCount[0] != null ? ((Number) avgCount[0]).doubleValue() : 0.0;
         int reviewCount   = avgCount[1] != null ? ((Number) avgCount[1]).intValue()    : 0;
 

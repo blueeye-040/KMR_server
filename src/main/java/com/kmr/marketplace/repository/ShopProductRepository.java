@@ -15,9 +15,9 @@ public interface ShopProductRepository extends JpaRepository<ShopProduct, Long> 
            "ORDER BY sp.sellingPrice ASC")
     List<ShopProduct> findByProductIds(@Param("ids") List<Long> ids);
 
-    // All sellers for a single product — JOIN FETCH shop to avoid N+1
-    @Query("SELECT sp FROM ShopProduct sp JOIN FETCH sp.shop " +
+    // All sellers for a single product — KMR Official first, then cheapest
+    @Query("SELECT sp FROM ShopProduct sp JOIN FETCH sp.shop s " +
            "WHERE sp.product.id = :pid AND sp.available = true " +
-           "ORDER BY sp.sellingPrice ASC")
+           "ORDER BY s.isOfficial DESC, sp.sellingPrice ASC")
     List<ShopProduct> findByProductIdAndAvailableTrueOrderBySellingPriceAsc(@Param("pid") Long productId);
 }
