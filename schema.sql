@@ -852,3 +852,14 @@ ON CONFLICT (shop_id, product_id) DO NOTHING;
 
 -- rest
 
+
+-- ============================================================
+-- Phase 4 — Orders & Payments (checkout spine)
+-- Applied to Supabase 2026-07-26
+-- ============================================================
+ALTER TABLE orders      ADD COLUMN IF NOT EXISTS razorpay_order_id   VARCHAR(80);
+ALTER TABLE orders      ADD COLUMN IF NOT EXISTS razorpay_payment_id VARCHAR(80);
+ALTER TABLE order_items ADD COLUMN IF NOT EXISTS status VARCHAR(40) DEFAULT 'PLACED';
+CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);
+CREATE INDEX IF NOT EXISTS idx_order_items_shop  ON order_items(shop_id);
+CREATE INDEX IF NOT EXISTS idx_orders_status     ON orders(status);
