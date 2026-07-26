@@ -46,16 +46,16 @@
 - [x] Product detail (base)
 - [x] Cart
 - [ ] Onboarding carousel (first launch)
-- [ ] Bottom-nav app shell (Home / Categories / Cart / Wishlist / Profile)
-- [ ] Category browse + product grid + filters + sort
-- [ ] Search screen
-- [ ] Product detail: **vendor picker** (choose shop → price/delivery) + wishlist
-- [ ] Checkout flow: address → payment → review → confirmation
-- [ ] Address management screens
-- [ ] Orders list + order detail + tracking timeline + cancel
-- [ ] Wishlist screen
-- [ ] Profile screen (info, addresses, orders, notifications, help, sign-out, delete acct)
-- [ ] Razorpay checkout integration (razorpay_flutter)
+- [x] Bottom-nav app shell (Home / Categories / Cart / Wishlist / Account)
+- [x] Category browse + product grid + filters + sort (search results screen)
+- [x] Search screen
+- [~] Product detail: vendor picker exists; wishlist heart + polish pending
+- [x] Checkout flow: address → payment → review → confirmation
+- [x] Address management screens
+- [x] Orders list + order detail + tracking timeline + cancel
+- [x] Wishlist screen
+- [~] Account screen (orders/addresses/wishlist wired; profile edit pending)
+- [x] Razorpay checkout integration (razorpay_flutter) — UPI/cards/netbanking/wallets
 - [ ] Live chat (AI support) widget
 - [ ] Push notifications (FCM) wiring
 - [ ] EN ↔ Urdu localization

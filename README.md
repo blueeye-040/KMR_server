@@ -7,7 +7,10 @@ four apps (customer, seller, delivery, admin).
 
 > 📍 **Resuming work?** Start at [`docs/PROGRESS.md`](docs/PROGRESS.md) — it has
 > the current state and the exact next step. Big picture: [`docs/ROADMAP.md`](docs/ROADMAP.md).
-> Design: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+> Design: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Amazon-parity feature
+> map: [`docs/FEATURE_SPEC.md`](docs/FEATURE_SPEC.md).
+> **Accounts & API keys to create (Razorpay, AWS SNS/SES, FCM, …):**
+> [`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md).
 
 ## The marketplace in one line
 Amazon-style catalog where **each product is sold by multiple vendors (shops)**.

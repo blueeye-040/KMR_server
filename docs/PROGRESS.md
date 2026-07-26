@@ -17,11 +17,22 @@ feature map + category taxonomy that this build targets.
 11 leaf categories under 4 departments).
 
 ### ▶ NEXT STEP (do this next)
-Flutter app shell + discovery are **done** (search, filter/sort, home rails —
-committed in the Flutter repo branch `customer-app-discovery`). Next, wire the
-**Flutter commerce screens** against the (already built & tested) backend APIs:
+Flutter customer app now covers the **full purchase loop** end-to-end (browse →
+search/filter → cart → checkout → pay → orders/tracking → wishlist), committed in
+the Flutter repo branch `customer-app-discovery`. **Credentials the client must
+create are documented in [`INTEGRATIONS.md`](INTEGRATIONS.md).**
 
-Flutter **checkout + orders + wishlist** feature set against the new APIs:
+Remaining for App 1 (pick up here):
+1. Product-detail polish: wishlist heart toggle (`/api/wishlist/{productId}`) +
+   nicer vendor picker; "you might also like" (related products).
+2. Backend: profile update (`PUT /api/profile`), coupons, support/return tickets,
+   SES email + SMS confirmations, FCM push.
+3. Flutter: onboarding carousel, profile edit, coupon field at checkout,
+   EN↔Urdu localization, FCM push, empty/skeleton polish.
+4. Release: app icons/splash, Android signing → AAB/APK, iOS signing → IPA, tests,
+   store listings + privacy/data-safety.
+
+--- (superseded) earlier note: Flutter checkout + orders + wishlist ---
 1. Add API paths to `lib/core/constants/api_constants.dart` (addresses, wishlist, orders).
 2. Address book: list/add/edit/set-default (`/api/addresses`).
 3. Checkout flow from cart: address → payment method → review → place order
@@ -41,6 +52,18 @@ then coupons, then SES email / SMS confirmations.
 ---
 
 ## Changelog
+
+### 2026-07-26 — Flutter: checkout + orders + wishlist + addresses (purchase loop complete)
+In the **Flutter repo** (branch `customer-app-discovery`, commit 8cadaaa):
+- Address book (list/add/edit/default/delete), reused as a checkout picker.
+- Checkout: address → payment (ONLINE via **razorpay_flutter** = UPI/cards/
+  netbanking/wallets, or **COD**) → summary → place. Dev-mode simulates payment
+  when the backend has no Razorpay keys, so the flow is fully testable now.
+- Order confirmation; Orders list; Order detail with tracking timeline, price/
+  payment breakdown, cancel, and a "need help with this order" support sheet.
+- Wishlist tab (grid, remove) replaces placeholder; Account menu + cart checkout wired.
+- `flutter analyze lib`: 0 errors. Native Razorpay setup + all credentials the
+  client must create are documented in **`docs/INTEGRATIONS.md`** (new).
 
 ### 2026-07-26 — Flutter: app shell + discovery (search / filter / sort / home rails)
 In the **Flutter repo** (branch `customer-app-discovery`, commit 19a6ed8):
