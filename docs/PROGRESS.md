@@ -17,12 +17,9 @@ feature map + category taxonomy that this build targets.
 11 leaf categories under 4 departments).
 
 ### ▶ NEXT STEP (do this next)
-Start the **Flutter customer app** build (see FEATURE_SPEC §5 work order):
-**(1)** bottom-nav app shell + routing + a shared product card (with wishlist heart);
-**(2)** Categories browse (departments→categories via `/api/categories/tree`) →
-search screen → filter/sort sheet (`/api/products` + `/api/products/facets`) → results grid.
-Then product-detail upgrades (vendor picker UI, wishlist, related), then the
-**checkout + orders + wishlist** wiring below.
+Flutter app shell + discovery are **done** (search, filter/sort, home rails —
+committed in the Flutter repo branch `customer-app-discovery`). Next, wire the
+**Flutter commerce screens** against the (already built & tested) backend APIs:
 
 Flutter **checkout + orders + wishlist** feature set against the new APIs:
 1. Add API paths to `lib/core/constants/api_constants.dart` (addresses, wishlist, orders).
@@ -44,6 +41,17 @@ then coupons, then SES email / SMS confirmations.
 ---
 
 ## Changelog
+
+### 2026-07-26 — Flutter: app shell + discovery (search / filter / sort / home rails)
+In the **Flutter repo** (branch `customer-app-discovery`, commit 19a6ed8):
+- New `lib/features/search`: unified search + browse results screen (`/search`)
+  with editable search bar, live sort, and a facets-driven filter sheet (brand /
+  price range / min discount / min rating); infinite scroll; empty/error states.
+- Home feed gained **Deals of the Day** + **Recommended** rails; search bar and
+  category chips navigate into scoped, filterable results.
+- Brought the previously-uncommitted Flutter app baseline under version control.
+- `flutter analyze lib` clean (only pre-existing infos). Not yet run on a device.
+- Flutter-side snapshot: `kmr_marketplace/docs/STATUS.md`.
 
 ### 2026-07-26 — Browse & discovery (search, filters, taxonomy, home rails)
 Added and **verified** against live Supabase:
