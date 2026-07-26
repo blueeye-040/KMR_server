@@ -6,6 +6,7 @@ import com.kmr.marketplace.entity.ShopProduct;
 import com.kmr.marketplace.repository.ProductRepository;
 import com.kmr.marketplace.repository.ShopProductRepository;
 import com.kmr.marketplace.service.ProductDetailService;
+import com.kmr.marketplace.service.ProductService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -22,16 +23,13 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class ProductController {
 
-    private final ProductRepository      productRepo;
-    private final ShopProductRepository  shopProductRepo;
     private final ProductDetailService   detailService;
+    private final ProductService         productService;
 
-    public ProductController(ProductRepository productRepo,
-                              ShopProductRepository shopProductRepo,
-                              ProductDetailService detailService) {
-        this.productRepo     = productRepo;
-        this.shopProductRepo = shopProductRepo;
+    public ProductController(ProductDetailService detailService,
+                             ProductService productService) {
         this.detailService   = detailService;
+        this.productService  = productService;
     }
 
     /**
@@ -54,59 +52,41 @@ public class ProductController {
     }
 
     /**
-     * GET /api/products?categoryId=1&page=0&size=20
-     * Public — no auth required.
+     * GET /api/products — search / filter / sort / paginate. All params optional.
+     * q, categoryId, departmentId, brandId, minPrice, maxPrice, minRating,
+     * minDiscount, sort(relevance|price_asc|price_desc|newest|popularity|rating|discount),
+     * page, size. Public — no auth required.
      */
     @GetMapping("/products")
     public ResponseEntity<PagedProductResponse> getProducts(
-            @RequestParam(required = false) Long   categoryId,
+            @RequestParam(required = false) String  q,
+            @RequestParam(required = false) Long    categoryId,
+            @RequestParam(required = false) Long    departmentId,
+            @RequestParam(required = false) Long    brandId,
+            @RequestParam(required = false) Double  minPrice,
+            @RequestParam(required = false) Double  maxPrice,
+            @RequestParam(required = false) Double  minRating,
+            @RequestParam(required = false) Integer minDiscount,
+            @RequestParam(required = false) String  sort,
             @RequestParam(defaultValue = "0")  int page,
             @RequestParam(defaultValue = "20") int size) {
 
-        Pageable pageable = PageRequest.of(page, Math.min(size, 50));
+        ProductFilter filter = new ProductFilter(q, categoryId, departmentId, brandId,
+                minPrice, maxPrice, minRating, minDiscount, sort, page, size);
+        return ResponseEntity.ok(productService.search(filter));
+    }
 
-        Page<Product> productPage = (categoryId != null)
-                ? productRepo.findByCategoryIdAndActiveTrueOrderByIdDesc(categoryId, pageable)
-                : productRepo.findByActiveTrueOrderByIdDesc(pageable);
-
-        // Batch-load best shop prices in a single query
-        List<Long> ids = productPage.getContent().stream()
-                .map(Product::getId).toList();
-
-        Map<Long, ShopProduct> bestPrice = ids.isEmpty() ? Map.of() :
-                shopProductRepo.findByProductIds(new ArrayList<>(ids))
-                        .stream()
-                        .collect(Collectors.toMap(
-                                sp -> sp.getProduct().getId(),
-                                sp -> sp,
-                                (a, b) -> a.getSellingPrice().compareTo(b.getSellingPrice()) <= 0 ? a : b
-                        ));
-
-        List<ProductDto> dtos = productPage.getContent().stream()
-                .map(p -> {
-                    ShopProduct sp = bestPrice.get(p.getId());
-                    if (sp == null) return null;
-                    return new ProductDto(
-                            p.getId(), p.getName(), p.getSlug(), p.getImageUrl(),
-                            p.getBrand()    != null ? p.getBrand().getName()    : null,
-                            p.getCategory() != null ? p.getCategory().getName() : null,
-                            sp.getMrp(), sp.getSellingPrice(),
-                            sp.getDiscountPercent(), sp.getDeliveryDays(),
-                            sp.getShop().getName(), sp.getShop().getId(),
-                            p.getRatingAvg() != null ? p.getRatingAvg().doubleValue() : 0.0,
-                            p.getReviewCount()
-                    );
-                })
-                .filter(Objects::nonNull)
-                .toList();
-
-        return ResponseEntity.ok(new PagedProductResponse(
-                dtos,
-                productPage.getNumber(),
-                productPage.getSize(),
-                productPage.getTotalElements(),
-                productPage.getTotalPages(),
-                productPage.isLast()
-        ));
+    /**
+     * GET /api/products/facets — available brands + price range for a category/search,
+     * used to populate the filter sheet. Public.
+     */
+    @GetMapping("/products/facets")
+    public ResponseEntity<FacetsDto> getFacets(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) Long   categoryId,
+            @RequestParam(required = false) Long   departmentId) {
+        ProductFilter filter = new ProductFilter(q, categoryId, departmentId,
+                null, null, null, null, null, null, 0, 20);
+        return ResponseEntity.ok(productService.facets(filter));
     }
 }

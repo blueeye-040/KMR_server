@@ -863,3 +863,36 @@ ALTER TABLE order_items ADD COLUMN IF NOT EXISTS status VARCHAR(40) DEFAULT 'PLA
 CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);
 CREATE INDEX IF NOT EXISTS idx_order_items_shop  ON order_items(shop_id);
 CREATE INDEX IF NOT EXISTS idx_orders_status     ON orders(status);
+
+-- ============================================================
+-- Phase 5 — Category taxonomy (departments) + search support
+-- Applied to Supabase 2026-07-26
+-- ============================================================
+ALTER TABLE categories ADD COLUMN IF NOT EXISTS parent_id  BIGINT REFERENCES categories(id);
+ALTER TABLE categories ADD COLUMN IF NOT EXISTS sort_order INT DEFAULT 0;
+
+-- Rename leaf 1 to reflect its catalog (earbuds/headphones/speakers/streaming)
+UPDATE categories SET name='Audio & Video', emoji='🎧' WHERE id=1;
+
+-- Departments (top level, parent_id NULL)
+INSERT INTO categories (id,name,emoji,color_hex,active,sort_order) VALUES
+ (12,'Electronics','🔌','#2563EB',true,1),
+ (13,'Home & Appliances','🏠','#F59E0B',true,2),
+ (14,'Fashion','👗','#EF4444',true,3),
+ (15,'Grocery & Essentials','🛒','#10B981',true,4)
+ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, emoji=EXCLUDED.emoji,
+  color_hex=EXCLUDED.color_hex, sort_order=EXCLUDED.sort_order, parent_id=NULL;
+
+-- Assign leaf categories to departments
+UPDATE categories SET parent_id=12, sort_order=1 WHERE id=1;   -- Audio & Video
+UPDATE categories SET parent_id=12, sort_order=2 WHERE id=2;   -- Mobiles
+UPDATE categories SET parent_id=12, sort_order=3 WHERE id=3;   -- Laptops
+UPDATE categories SET parent_id=13, sort_order=1 WHERE id=4;   -- Appliances
+UPDATE categories SET parent_id=13, sort_order=2 WHERE id=10;  -- Cleaning Essentials
+UPDATE categories SET parent_id=14, sort_order=1 WHERE id=5;   -- Fashion
+UPDATE categories SET parent_id=15, sort_order=1 WHERE id=6;   -- Dairy & Eggs
+UPDATE categories SET parent_id=15, sort_order=2 WHERE id=7;   -- Atta, Rice & Staples
+UPDATE categories SET parent_id=15, sort_order=3 WHERE id=8;   -- Beverages
+UPDATE categories SET parent_id=15, sort_order=4 WHERE id=9;   -- Snacks & Munchies
+UPDATE categories SET parent_id=15, sort_order=5 WHERE id=11;  -- Personal Care
+SELECT setval('categories_id_seq', (SELECT MAX(id) FROM categories));

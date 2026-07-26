@@ -38,7 +38,7 @@ public class SecurityConfig {
                 .cors(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/home", "/api/categories").permitAll()
+                        .requestMatchers("/api/home", "/api/categories", "/api/categories/**").permitAll()
                         // GET product list + detail is public; POST /reviews requires auth
                         .requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**").permitAll()
                         .anyRequest().authenticated()

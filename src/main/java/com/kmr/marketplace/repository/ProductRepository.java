@@ -42,6 +42,10 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             @Param("excludeId") Long excludeId,
             org.springframework.data.domain.Pageable pageable);
 
+    // Fetch a specific set of products (search results) with brand + category
+    @EntityGraph(attributePaths = {"brand", "category"})
+    List<Product> findByIdIn(List<Long> ids);
+
     // Analytics counts
     long countByActiveTrue();
     long countByCategoryIdAndActiveTrue(Long categoryId);

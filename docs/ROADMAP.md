@@ -25,7 +25,11 @@
 - [x] **Razorpay online payment (create order + verify signature) w/ dev-mode**
 - [x] **COD orders**
 - [x] **Order history / detail / status timeline / cancel + restock**
-- [ ] Product search (keyword) + filters (price range) + sort (price/newest/popularity)
+- [x] Product **search** (keyword FTS+ILIKE) + **filters** (brand/price/rating/discount)
+      + **sort** (relevance/price/newest/popularity/rating/discount) + **facets** endpoint
+- [x] Category **taxonomy**: departments (parent_id) + `/api/categories/tree`
+- [x] Home rails: **Deals of the Day** + **Recommended** (search-engine backed)
+- [ ] "Most ordered" rail (order_items aggregate; today served by top_selling flag)
 - [ ] Coupons (flat / percentage / min cart value)
 - [ ] Profile update (name / phone / avatar)
 - [ ] Order confirmation email (AWS SES) + SMS

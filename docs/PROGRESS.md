@@ -5,15 +5,26 @@
 
 ## Current state (2026-07-26)
 
-**Focus:** Customer app (App 1) — backend commerce spine complete & verified;
-Flutter customer screens for checkout/orders/wishlist/profile are next.
+**Focus:** Customer app (App 1). Backend now covers the full browse+buy loop
+(catalog, search/filter/sort, taxonomy, cart, checkout, orders, payments,
+wishlist, addresses) — all verified against live Supabase. Flutter build is next.
+
+**Engineering plan:** see [`docs/FEATURE_SPEC.md`](FEATURE_SPEC.md) — the Amazon-parity
+feature map + category taxonomy that this build targets.
 
 **Backend:** Spring Boot compiles clean. Runs against live Supabase.
-**DB:** live on Supabase; catalog seeded (70 products, 150 listings, 6 shops).
-Orders/addresses/wishlist tables empty (clean).
+**DB:** live on Supabase; catalog seeded (70 products, 150 listings, 6 shops,
+11 leaf categories under 4 departments).
 
 ### ▶ NEXT STEP (do this next)
-Build the **Flutter checkout + orders + wishlist** feature set against the new APIs:
+Start the **Flutter customer app** build (see FEATURE_SPEC §5 work order):
+**(1)** bottom-nav app shell + routing + a shared product card (with wishlist heart);
+**(2)** Categories browse (departments→categories via `/api/categories/tree`) →
+search screen → filter/sort sheet (`/api/products` + `/api/products/facets`) → results grid.
+Then product-detail upgrades (vendor picker UI, wishlist, related), then the
+**checkout + orders + wishlist** wiring below.
+
+Flutter **checkout + orders + wishlist** feature set against the new APIs:
 1. Add API paths to `lib/core/constants/api_constants.dart` (addresses, wishlist, orders).
 2. Address book: list/add/edit/set-default (`/api/addresses`).
 3. Checkout flow from cart: address → payment method → review → place order
@@ -33,6 +44,26 @@ then coupons, then SES email / SMS confirmations.
 ---
 
 ## Changelog
+
+### 2026-07-26 — Browse & discovery (search, filters, taxonomy, home rails)
+Added and **verified** against live Supabase:
+- **Category taxonomy**: `categories.parent_id`/`sort_order`; 4 departments
+  (Electronics, Home & Appliances, Fashion, Grocery & Essentials) over the 11 leaf
+  categories; renamed leaf 1 → "Audio & Video". `/api/categories` returns leaves
+  (backward compatible); new `/api/categories/tree` returns departments→children.
+- **Product search/filter/sort**: `/api/products` now takes `q` (Postgres FTS +
+  ILIKE), `categoryId`, `departmentId`, `brandId`, `minPrice`, `maxPrice`,
+  `minRating`, `minDiscount`, `sort` (relevance/price_asc/price_desc/newest/
+  popularity/rating/discount), `page`, `size`. Price filter/sort use each
+  product's best available vendor price. Safe dynamic native SQL
+  (`ProductSearchRepositoryImpl`, whitelisted ORDER BY).
+- **Facets**: `/api/products/facets?categoryId&departmentId&q` → brands+counts and
+  price bounds for the filter sheet.
+- **Home rails**: added `dealsOfTheDay` (top discounts) and `recommended`
+  (top-rated), reusing the search engine. Home feed is now Amazon-shaped.
+- New: `ProductService`, `ProductFilter`, `FacetsDto`, `CategoryTreeDto`.
+Verified: FTS search, price asc/desc sort, brand/price/discount/rating filters,
+department scoping, pagination, facets, and all home rails return correct data.
 
 ### 2026-07-26 — Backend commerce spine (Addresses, Wishlist, Orders, Payments)
 Added and **verified end-to-end** against live Supabase:
@@ -56,8 +87,9 @@ Test data cleaned from DB afterward.
 ```
 POST /api/auth/register | login | logout        GET /api/auth/me
 POST /api/auth/send-otp | verify-otp
-GET  /api/home | /api/categories
-GET  /api/products?categoryId&page&size          GET /api/products/{id}
+GET  /api/home | /api/categories | /api/categories/tree
+GET  /api/products?q&categoryId&departmentId&brandId&minPrice&maxPrice&minRating&minDiscount&sort&page&size
+GET  /api/products/{id}          GET /api/products/facets?categoryId&departmentId&q
 POST /api/products/{id}/reviews
 GET/POST/PUT/DELETE /api/cart ...                 GET /api/cart/count
 GET/POST/PUT/DELETE /api/addresses               PUT /api/addresses/{id}/default

@@ -20,6 +20,12 @@ public class Category {
     private String imageUrl;
     private boolean active;
 
+    @Column(name = "parent_id")
+    private Long parentId;          // null = department (top level); set = leaf category
+
+    @Column(name = "sort_order")
+    private int sortOrder;
+
     @Column(name = "created_at", updatable = false)
     private java.time.OffsetDateTime createdAt;
 
@@ -30,6 +36,8 @@ public class Category {
     public String getColorHex() { return colorHex; }
     public String getImageUrl() { return imageUrl; }
     public boolean isActive() { return active; }
+    public Long getParentId() { return parentId; }
+    public int getSortOrder() { return sortOrder; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
     @PrePersist
     void prePersist() { this.createdAt = OffsetDateTime.now(); }
@@ -39,5 +47,6 @@ public class Category {
     public void setColorHex(String colorHex) { this.colorHex = colorHex; }
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
     public void setActive(boolean active) { this.active = active; }
-    
+    public void setParentId(Long parentId) { this.parentId = parentId; }
+    public void setSortOrder(int sortOrder) { this.sortOrder = sortOrder; }
 }

@@ -30,4 +30,10 @@ public class HomeController {
     public ResponseEntity<List<CategoryDto>> categories() {
         return ResponseEntity.ok(homeService.getCategories());
     }
+
+    // Department → child categories, for the Categories browse tab
+    @GetMapping("/categories/tree")
+    public ResponseEntity<List<com.kmr.marketplace.dto.CategoryTreeDto>> categoryTree() {
+        return ResponseEntity.ok(homeService.getCategoryTree());
+    }
 }
