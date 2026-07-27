@@ -38,6 +38,9 @@ public class SecurityConfig {
                 .cors(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
+                        // Swagger UI + OpenAPI spec — public so the docs are reachable
+                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html",
+                                "/v3/api-docs/**", "/swagger-resources/**").permitAll()
                         .requestMatchers("/api/home", "/api/categories", "/api/categories/**").permitAll()
                         // GET product list + detail is public; POST /reviews requires auth
                         .requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**").permitAll()
