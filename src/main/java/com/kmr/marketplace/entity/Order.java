@@ -51,6 +51,9 @@ public class Order {
     @Column(name = "razorpay_payment_id")
     private String razorpayPaymentId;
 
+    @Column(name = "coupon_code")
+    private String couponCode;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> items = new ArrayList<>();
 
@@ -87,6 +90,7 @@ public class Order {
     public String getShippingAddress()   { return shippingAddress; }
     public String getRazorpayOrderId()   { return razorpayOrderId; }
     public String getRazorpayPaymentId() { return razorpayPaymentId; }
+    public String getCouponCode()        { return couponCode; }
     public List<OrderItem> getItems()    { return items; }
     public Instant getCreatedAt()        { return createdAt; }
     public Instant getUpdatedAt()        { return updatedAt; }
@@ -103,6 +107,7 @@ public class Order {
     public void setShippingAddress(String v)         { this.shippingAddress = v; }
     public void setRazorpayOrderId(String v)         { this.razorpayOrderId = v; }
     public void setRazorpayPaymentId(String v)       { this.razorpayPaymentId = v; }
+    public void setCouponCode(String v)              { this.couponCode = v; }
     public void setItems(List<OrderItem> items)      { this.items = items; }
     public void setCreatedAt(Instant v)              { this.createdAt = v; }
     public void setUpdatedAt(Instant v)              { this.updatedAt = v; }

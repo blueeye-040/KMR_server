@@ -896,3 +896,51 @@ UPDATE categories SET parent_id=15, sort_order=3 WHERE id=8;   -- Beverages
 UPDATE categories SET parent_id=15, sort_order=4 WHERE id=9;   -- Snacks & Munchies
 UPDATE categories SET parent_id=15, sort_order=5 WHERE id=11;  -- Personal Care
 SELECT setval('categories_id_seq', (SELECT MAX(id) FROM categories));
+
+-- ============================================================
+-- Phase 6 — Coupons, support tickets, device tokens, profile
+-- Applied to Supabase 2026-07-27
+-- ============================================================
+CREATE TABLE IF NOT EXISTS coupons (
+  id             BIGSERIAL PRIMARY KEY,
+  code           VARCHAR(40) NOT NULL UNIQUE,
+  description    VARCHAR(200),
+  type           VARCHAR(20) NOT NULL,            -- FLAT | PERCENT
+  value          DECIMAL(10,2) NOT NULL,
+  min_cart_value DECIMAL(10,2) DEFAULT 0,
+  max_discount   DECIMAL(10,2),                   -- cap for PERCENT
+  active         BOOLEAN DEFAULT true,
+  expires_at     TIMESTAMPTZ,
+  usage_limit    INT,
+  used_count     INT DEFAULT 0,
+  created_at     TIMESTAMPTZ DEFAULT NOW()
+);
+INSERT INTO coupons (code, description, type, value, min_cart_value, max_discount, expires_at) VALUES
+  ('KMR100',   'Flat Rs.100 off on orders above Rs.999', 'FLAT',    100, 999,  NULL, NOW() + INTERVAL '90 days'),
+  ('SAVE10',   '10% off up to Rs.500 above Rs.1499',      'PERCENT',  10, 1499, 500,  NOW() + INTERVAL '90 days'),
+  ('WELCOME50','Flat Rs.50 off, no minimum',              'FLAT',     50, 0,    NULL, NOW() + INTERVAL '90 days')
+ON CONFLICT (code) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS support_tickets (
+  id         BIGSERIAL PRIMARY KEY,
+  user_id    BIGINT REFERENCES users(id) ON DELETE CASCADE,
+  order_id   BIGINT REFERENCES orders(id) ON DELETE SET NULL,
+  type       VARCHAR(20) NOT NULL DEFAULT 'ISSUE',   -- ISSUE | RETURN | EXCHANGE
+  subject    VARCHAR(200) NOT NULL,
+  message    TEXT,
+  status     VARCHAR(20) DEFAULT 'OPEN',             -- OPEN | IN_PROGRESS | RESOLVED
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_support_user ON support_tickets(user_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS device_tokens (
+  id         BIGSERIAL PRIMARY KEY,
+  user_id    BIGINT REFERENCES users(id) ON DELETE CASCADE,
+  token      VARCHAR(300) NOT NULL UNIQUE,
+  platform   VARCHAR(20),                            -- ANDROID | IOS
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_device_user ON device_tokens(user_id);
+
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(40);

@@ -30,11 +30,12 @@
 - [x] Category **taxonomy**: departments (parent_id) + `/api/categories/tree`
 - [x] Home rails: **Deals of the Day** + **Recommended** (search-engine backed)
 - [ ] "Most ordered" rail (order_items aggregate; today served by top_selling flag)
-- [ ] Coupons (flat / percentage / min cart value)
-- [ ] Profile update (name / phone / avatar)
-- [ ] Order confirmation email (AWS SES) + SMS
-- [ ] Return / exchange request records
-- [ ] Push notification dispatch (FCM) + cart-abandonment trigger
+- [x] Coupons (flat / percentage / min cart value + cap) — `/api/coupons/apply`, applied at checkout
+- [x] Profile update (name / phone / avatar) — `/api/profile`
+- [x] Order confirmation email (AWS SES) — dev-mode until `MAIL_FROM` set
+- [x] Support / return / exchange tickets — `/api/support`
+- [x] Push dispatch (FCM) + device-token registration — dev-mode until FCM creds
+- [ ] SMS order confirmation (AWS SNS) + cart-abandonment trigger
 - [ ] Live order tracking (delivery GPS feed) — read side for customer
 - [ ] AI: recommendations, chatbot, image search
 - [ ] Rate limiting, request logging, prod hardening

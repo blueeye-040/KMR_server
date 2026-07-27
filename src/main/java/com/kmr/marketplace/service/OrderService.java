@@ -34,6 +34,9 @@ public class OrderService {
     private final CartRepository    cartRepo;
     private final AddressRepository addressRepo;
     private final PaymentService    paymentService;
+    private final CouponService     couponService;
+    private final EmailService      emailService;
+    private final PushService       pushService;
     private final AuthHelper        authHelper;
     private final ObjectMapper      objectMapper;
 
@@ -41,14 +44,28 @@ public class OrderService {
                         CartRepository cartRepo,
                         AddressRepository addressRepo,
                         PaymentService paymentService,
+                        CouponService couponService,
+                        EmailService emailService,
+                        PushService pushService,
                         AuthHelper authHelper,
                         ObjectMapper objectMapper) {
         this.orderRepo      = orderRepo;
         this.cartRepo       = cartRepo;
         this.addressRepo    = addressRepo;
         this.paymentService = paymentService;
+        this.couponService  = couponService;
+        this.emailService   = emailService;
+        this.pushService    = pushService;
         this.authHelper     = authHelper;
         this.objectMapper   = objectMapper;
+    }
+
+    private void notifyConfirmed(User user, Order order) {
+        double total = order.getTotalAmount().doubleValue();
+        emailService.sendOrderConfirmation(user.getEmail(), user.getName(),
+                order.getOrderNumber(), total);
+        pushService.sendToUser(user.getId(), "Order confirmed",
+                "Your order " + order.getOrderNumber() + " is confirmed.");
     }
 
     // ── Checkout ──────────────────────────────────────────────────────────────
@@ -76,7 +93,10 @@ public class OrderService {
         }
 
         double delivery = subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_CHARGE;
-        double discount = 0;   // coupon handling comes later
+
+        // Coupon discount applies to the item subtotal (delivery is the platform's).
+        CouponService.Applied coupon = couponService.applyAtCheckout(req.couponCode(), subtotal);
+        double discount = Math.min(coupon.discount(), subtotal);
         double total    = subtotal + delivery - discount;
 
         Order order = new Order();
@@ -85,6 +105,7 @@ public class OrderService {
         order.setTotalAmount(BigDecimal.valueOf(total));
         order.setDeliveryCharge(BigDecimal.valueOf(delivery));
         order.setDiscountAmount(BigDecimal.valueOf(discount));
+        order.setCouponCode(coupon.code());
         order.setStatus("PLACED");
         order.setPaymentMethod(req.paymentMethod());
         order.setPaymentStatus("PENDING");
@@ -113,6 +134,9 @@ public class OrderService {
             razorpayOrderId = paymentService.createOrder(saved.getTotalAmount(), saved.getOrderNumber());
             razorpayKeyId   = paymentService.keyId();
             saved.setRazorpayOrderId(razorpayOrderId);
+        } else {
+            // COD is confirmed at placement — notify now (online notifies after payment).
+            notifyConfirmed(user, saved);
         }
 
         return new PlaceOrderResponse(
@@ -142,6 +166,7 @@ public class OrderService {
         order.setPaymentStatus("PAID");
         order.setRazorpayPaymentId(req.razorpayPaymentId());
         order.setStatus("CONFIRMED");
+        notifyConfirmed(user, order);
         return detail(orderId);
     }
 

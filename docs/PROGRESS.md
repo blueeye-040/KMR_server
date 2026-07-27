@@ -53,6 +53,27 @@ then coupons, then SES email / SMS confirmations.
 
 ## Changelog
 
+### 2026-07-27 — Backend: coupons, profile, support tickets, email & push (+ detail wishlist)
+Added and **verified** against live Supabase:
+- **Coupons**: `coupons` table + seed (KMR100/SAVE10/WELCOME50). `POST /api/coupons/apply`
+  previews a code vs cart total; `OrderService` applies + consumes it at checkout,
+  recording `orders.coupon_code` and the discount. FLAT/PERCENT with min-cart + cap.
+  Users see **available offers** at `GET /api/coupons` (active, non-expired, non-exhausted).
+  **Admin management** (ADMIN role only): `GET /api/coupons/admin`, create/update/delete,
+  `PATCH /api/coupons/{id}/active` to enable/disable — disabled coupons vanish from the
+  user list (verified). Non-admins get 403.
+- **Profile**: `GET/PUT /api/profile` (name/phone/avatar).
+- **Support tickets**: `support_tickets` table; `POST/GET /api/support`, `GET /api/support/{id}`
+  (ISSUE/RETURN/EXCHANGE) — backs the app's "need help with this order" sheet.
+- **Email (AWS SES)** `EmailService` + **Push (FCM)** `PushService` + device-token
+  registration (`POST/DELETE /api/devices/token`). Order confirmation fires email +
+  push on COD placement and on online payment success. Both run **dev-mode**
+  (logged) until `MAIL_FROM` / `FCM_SERVICE_ACCOUNT_JSON` are set — verified logs fire.
+- **Flutter**: product-detail wishlist heart is now API-backed (syncs with Wishlist tab).
+Smoke test passed: profile update; coupon min-cart/flat/percent-cap/invalid; support
+ticket create+list; device register; coupon-applied COD order (₹4499−₹50=₹4449) with
+email+push dev-mode logs. Test data cleaned.
+
 ### 2026-07-26 — Flutter: checkout + orders + wishlist + addresses (purchase loop complete)
 In the **Flutter repo** (branch `customer-app-discovery`, commit 8cadaaa):
 - Address book (list/add/edit/default/delete), reused as a checkout picker.
@@ -127,7 +148,13 @@ GET/POST/PUT/DELETE /api/addresses               PUT /api/addresses/{id}/default
 GET /api/wishlist | /count   POST/DELETE /api/wishlist/{productId}
 POST /api/orders           POST /api/orders/{id}/payment/verify
 GET  /api/orders           GET  /api/orders/{id}   POST /api/orders/{id}/cancel
+GET  /api/coupons          POST /api/coupons/apply
+GET/PUT /api/profile
+POST/GET /api/support      GET /api/support/{id}
+POST/DELETE /api/devices/token
 GET  /api/analytics
+-- admin (ROLE=ADMIN): GET /api/coupons/admin, POST /api/coupons,
+   PUT /api/coupons/{id}, PATCH /api/coupons/{id}/active, DELETE /api/coupons/{id}
 ```
 
 ---
