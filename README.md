@@ -5,12 +5,21 @@ Supabase; all other services on AWS. This repo is also the **program hub** —
 see [`docs/`](docs/) for the architecture, roadmap, and progress log across all
 four apps (customer, seller, delivery, admin).
 
-> 📍 **Resuming work?** Start at [`docs/PROGRESS.md`](docs/PROGRESS.md) — it has
-> the current state and the exact next step. Big picture: [`docs/ROADMAP.md`](docs/ROADMAP.md).
-> Design: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Amazon-parity feature
-> map: [`docs/FEATURE_SPEC.md`](docs/FEATURE_SPEC.md).
-> **Accounts & API keys to create (Razorpay, AWS SNS/SES, FCM, …):**
-> [`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md).
+### 📚 Documentation
+| Doc | What it covers |
+|---|---|
+| [docs/PROGRESS.md](docs/PROGRESS.md) | **Start here when resuming** — current state + next step |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | Full delivery plan (all 4 apps) as checkboxes |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design + the payment-split rule |
+| [docs/SERVER_GUIDE.md](docs/SERVER_GUIDE.md) | **Backend reference** — every API (public/private/admin), services, data model |
+| [docs/SWAGGER_GUIDE.md](docs/SWAGGER_GUIDE.md) | How to open & use Swagger to test the API (with login) |
+| [docs/FCM_GUIDE.md](docs/FCM_GUIDE.md) | What push/FCM is + exact steps to make it live |
+| [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md) | Accounts & API keys to create (Razorpay, AWS, FCM, …) |
+| [docs/AMAZON_PARITY.md](docs/AMAZON_PARITY.md) | Feature-by-feature check vs Amazon |
+| [docs/FEATURE_SPEC.md](docs/FEATURE_SPEC.md) | Amazon-parity feature map + category taxonomy |
+| Mobile app guide | in the Flutter repo: `docs/APP_GUIDE.md` |
+
+Interactive API docs run at **`/swagger-ui.html`** when the server is up.
 
 ## The marketplace in one line
 Amazon-style catalog where **each product is sold by multiple vendors (shops)**.

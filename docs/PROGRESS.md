@@ -53,6 +53,16 @@ then coupons, then SES email / SMS confirmations.
 
 ## Changelog
 
+### 2026-07-28 — Swagger, onboarding, and production documentation
+- **Swagger/OpenAPI** (springdoc) at `/swagger-ui.html` — all 37 endpoints,
+  JWT "Authorize" for testing secured routes. Verified UI renders.
+- **Onboarding carousel** (Flutter) — 3 slides, first-launch only.
+- **Documentation set:** `SERVER_GUIDE.md` (every API + service + data model),
+  `SWAGGER_GUIDE.md` (how to test with login), `FCM_GUIDE.md` (what push is + how
+  to go live), `AMAZON_PARITY.md` (feature check vs Amazon), and in the Flutter
+  repo `docs/APP_GUIDE.md` (every screen ↔ provider ↔ API, with a "how to add a
+  feature" recipe). READMEs link the full doc index.
+
 ### 2026-07-28 — Rebrand to Valley Rush + Flutter endpoint wiring
 - **Brand: KMR → Valley Rush** everywhere user-facing. Backend: `EmailService`
   order emails. DB: the official store row renamed to "Valley Rush Store"
