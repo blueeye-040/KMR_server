@@ -53,6 +53,19 @@ then coupons, then SES email / SMS confirmations.
 
 ## Changelog
 
+### 2026-07-28 — Rebrand to Valley Rush + Flutter endpoint wiring
+- **Brand: KMR → Valley Rush** everywhere user-facing. Backend: `EmailService`
+  order emails. DB: the official store row renamed to "Valley Rush Store"
+  (`shops.is_official`). Flutter: all UI strings, app name, launcher icon + native
+  splash (from the client logo), package/bundle id `com.valleyrush.customer`.
+- **Flutter wired to the new backend endpoints**: coupon at checkout (+available
+  offers), profile edit, support ticket from the order-help sheet, and a
+  device-token registration client (FCM token source pending Firebase setup).
+- **Release prep** (Flutter repo): conditional release signing via
+  `android/key.properties`, `docs/RELEASE.md`, and `docs/store/` listing drafts
+  (Play + App Store, privacy policy, terms, data-safety). Android/iOS developer
+  accounts + keystore are the client's remaining step before store upload.
+
 ### 2026-07-27 — Backend: coupons, profile, support tickets, email & push (+ detail wishlist)
 Added and **verified** against live Supabase:
 - **Coupons**: `coupons` table + seed (KMR100/SAVE10/WELCOME50). `POST /api/coupons/apply`

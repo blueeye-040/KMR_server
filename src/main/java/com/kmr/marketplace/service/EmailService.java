@@ -55,13 +55,13 @@ public class EmailService {
     }
 
     public void sendOrderConfirmation(String to, String name, String orderNumber, double total) {
-        String subject = "KMR Marketplace — Order " + orderNumber + " confirmed";
+        String subject = "Valley Rush — Order " + orderNumber + " confirmed";
         String body = "Hi " + (name == null ? "there" : name) + ",\n\n"
                 + "Thank you for your order!\n"
                 + "Order number: " + orderNumber + "\n"
                 + "Total: ₹" + String.format("%,.0f", total) + "\n\n"
-                + "You can track it anytime under 'My Orders' in the KMR app.\n\n"
-                + "— Team KMR Marketplace";
+                + "You can track it anytime under 'My Orders' in the Valley Rush app.\n\n"
+                + "— Team Valley Rush";
         send(to, subject, body);
     }
 }
