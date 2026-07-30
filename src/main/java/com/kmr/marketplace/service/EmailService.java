@@ -54,6 +54,26 @@ public class EmailService {
         }
     }
 
+    public void sendVerificationCode(String to, String code) {
+        String subject = "Valley Rush — Confirm your email";
+        String body = "Welcome to Valley Rush!\n\n"
+                + "Your email confirmation code is: " + code + "\n"
+                + "It is valid for 5 minutes. Do not share it with anyone.\n\n"
+                + "If you didn't sign up, you can ignore this email.\n\n"
+                + "— Team Valley Rush";
+        send(to, subject, body);
+    }
+
+    public void sendPasswordResetCode(String to, String code) {
+        String subject = "Valley Rush — Password reset code";
+        String body = "We received a request to reset your Valley Rush password.\n\n"
+                + "Your reset code is: " + code + "\n"
+                + "It is valid for 5 minutes. Do not share it with anyone.\n\n"
+                + "If you didn't request this, please ignore this email and your "
+                + "password stays unchanged.\n\n— Team Valley Rush";
+        send(to, subject, body);
+    }
+
     public void sendOrderConfirmation(String to, String name, String orderNumber, double total) {
         String subject = "Valley Rush — Order " + orderNumber + " confirmed";
         String body = "Hi " + (name == null ? "there" : name) + ",\n\n"
