@@ -37,6 +37,7 @@ public class OrderService {
     private final CouponService     couponService;
     private final EmailService      emailService;
     private final PushService       pushService;
+    private final SettlementService settlementService;
     private final AuthHelper        authHelper;
     private final ObjectMapper      objectMapper;
 
@@ -47,6 +48,7 @@ public class OrderService {
                         CouponService couponService,
                         EmailService emailService,
                         PushService pushService,
+                        SettlementService settlementService,
                         AuthHelper authHelper,
                         ObjectMapper objectMapper) {
         this.orderRepo      = orderRepo;
@@ -56,9 +58,14 @@ public class OrderService {
         this.couponService  = couponService;
         this.emailService   = emailService;
         this.pushService    = pushService;
+        this.settlementService = settlementService;
         this.authHelper     = authHelper;
         this.objectMapper   = objectMapper;
     }
+
+    // Canonical status flow for admin transitions + tracking.
+    private static final List<String> STATUS_FLOW = List.of(
+            "PLACED", "CONFIRMED", "SHIPPED", "OUT_FOR_DELIVERY", "DELIVERED");
 
     private void notifyConfirmed(User user, Order order) {
         double total = order.getTotalAmount().doubleValue();
@@ -167,6 +174,7 @@ public class OrderService {
         order.setRazorpayPaymentId(req.razorpayPaymentId());
         order.setStatus("CONFIRMED");
         notifyConfirmed(user, order);
+        settlementService.settleOrder(order);   // split product money to vendors (HOLD/SPOT)
         return detail(orderId);
     }
 
@@ -191,7 +199,18 @@ public class OrderService {
         User user = authHelper.currentUser();
         Order o = orderRepo.findDetailByIdAndUserId(orderId, user.getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+        return buildDetail(o);
+    }
 
+    /** Admin/system order detail — not scoped to the current user. */
+    @Transactional(readOnly = true)
+    public OrderDetailDto detailById(Long orderId) {
+        Order o = orderRepo.findById(orderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+        return buildDetail(o);
+    }
+
+    private OrderDetailDto buildDetail(Order o) {
         List<OrderItemDto> itemDtos = o.getItems().stream().map(i -> {
             double lineTotal = i.getPrice().doubleValue() * i.getQuantity();
             return new OrderItemDto(
@@ -242,7 +261,44 @@ public class OrderService {
             if (sp != null) sp.setStock(sp.getStock() + i.getQuantity());  // restock
         }
         if ("PAID".equals(o.getPaymentStatus())) o.setPaymentStatus("REFUNDED");
+        settlementService.cancelOrder(o);   // void any un-paid vendor transfers
         return detail(orderId);
+    }
+
+    /**
+     * Admin: advance an order's status (delivery workflow). Reaching DELIVERED
+     * releases any held vendor settlements (HOLD mode). Not user-scoped.
+     */
+    public OrderDetailDto updateStatus(Long orderId, String newStatus) {
+        authHelper.requireRole(com.kmr.marketplace.entity.UserRole.ADMIN);
+        if (!STATUS_FLOW.contains(newStatus)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid status: " + newStatus);
+        }
+        Order o = orderRepo.findById(orderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+        if ("CANCELLED".equals(o.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order is cancelled");
+        }
+        o.setStatus(newStatus);
+        for (OrderItem i : o.getItems()) i.setStatus(newStatus);
+        if ("DELIVERED".equals(newStatus)) {
+            settlementService.releaseOrder(o);          // pay out vendors on delivery
+            if ("COD".equals(o.getPaymentMethod())) o.setPaymentStatus("PAID");
+        }
+        // Keep the customer informed at every step.
+        pushService.sendToUser(o.getUser().getId(),
+                "Order " + o.getOrderNumber(), statusMessage(newStatus));
+        return detailById(orderId);
+    }
+
+    private String statusMessage(String status) {
+        return switch (status) {
+            case "CONFIRMED"        -> "Your order is confirmed.";
+            case "SHIPPED"          -> "Your order has been shipped.";
+            case "OUT_FOR_DELIVERY" -> "Your order is out for delivery.";
+            case "DELIVERED"        -> "Your order has been delivered. Enjoy!";
+            default                 -> "Your order status is now " + status + ".";
+        };
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

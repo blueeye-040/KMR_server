@@ -944,3 +944,24 @@ CREATE TABLE IF NOT EXISTS device_tokens (
 CREATE INDEX IF NOT EXISTS idx_device_user ON device_tokens(user_id);
 
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(40);
+
+-- ============================================================
+-- Phase 7 — Vendor settlements (Razorpay Route) + auth security
+-- Applied to Supabase 2026-07-30
+-- ============================================================
+ALTER TABLE shops ADD COLUMN IF NOT EXISTS razorpay_account_id VARCHAR(60);
+
+CREATE TABLE IF NOT EXISTS settlements (
+  id                   BIGSERIAL PRIMARY KEY,
+  order_id             BIGINT REFERENCES orders(id) ON DELETE CASCADE,
+  shop_id              BIGINT REFERENCES shops(id),
+  amount               DECIMAL(10,2) NOT NULL,
+  mode                 VARCHAR(10),          -- HOLD | SPOT
+  status               VARCHAR(20) DEFAULT 'PENDING',
+                       -- PENDING | HELD | RELEASED | SETTLED | CANCELLED | FAILED
+  razorpay_transfer_id VARCHAR(60),
+  created_at           TIMESTAMPTZ DEFAULT NOW(),
+  released_at          TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_settlements_order ON settlements(order_id);
+CREATE INDEX IF NOT EXISTS idx_settlements_shop  ON settlements(shop_id, status);

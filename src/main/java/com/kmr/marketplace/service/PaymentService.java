@@ -37,11 +37,17 @@ public class PaymentService {
 
     private final HttpClient http = HttpClient.newHttpClient();
 
+    private static final String RAZORPAY_API = "https://api.razorpay.com/v1";
+
     @Value("${razorpay.key-id:}")
     private String keyId;
 
     @Value("${razorpay.key-secret:}")
     private String keySecret;
+
+    /** HOLD = hold vendor money until delivered, then release. SPOT = split immediately. */
+    @Value("${razorpay.split-mode:HOLD}")
+    private String splitMode;
 
     /** True only when real Razorpay credentials are present. */
     public boolean isLive() {
@@ -50,6 +56,72 @@ public class PaymentService {
     }
 
     public String keyId() { return keyId; }
+
+    public String splitMode() { return splitMode; }
+
+    public boolean holdMode() { return "HOLD".equalsIgnoreCase(splitMode); }
+
+    private String basicAuth() {
+        return "Basic " + Base64.getEncoder().encodeToString(
+                (keyId + ":" + keySecret).getBytes(StandardCharsets.UTF_8));
+    }
+
+    /**
+     * Create a Route transfer of a vendor's share from a captured payment to their
+     * linked account. onHold=true keeps the money on hold until released. Returns
+     * the transfer id, or a simulated id in dev-mode.
+     */
+    public String createTransfer(String paymentId, String linkedAccountId,
+                                 BigDecimal amountInr, boolean onHold, String reference) {
+        if (!isLive()) {
+            String fake = "trf_dev_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
+            log.info("[route dev-mode] transfer {} ₹{} → {} (onHold={}) ref={}",
+                    fake, amountInr, linkedAccountId, onHold, reference);
+            return fake;
+        }
+        long paise = amountInr.multiply(BigDecimal.valueOf(100)).longValueExact();
+        String body = String.format(
+                "{\"transfers\":[{\"account\":\"%s\",\"amount\":%d,\"currency\":\"INR\",\"on_hold\":%s}]}",
+                linkedAccountId, paise, onHold ? "1" : "0");
+        try {
+            HttpRequest req = HttpRequest.newBuilder(URI.create(RAZORPAY_API + "/payments/" + paymentId + "/transfers"))
+                    .header("Authorization", basicAuth())
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(body))
+                    .build();
+            HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
+            if (res.statusCode() / 100 != 2) {
+                throw new IllegalStateException("Razorpay transfer error " + res.statusCode() + ": " + res.body());
+            }
+            Matcher m = Pattern.compile("\"id\"\\s*:\\s*\"(trf_[^\"]+)\"").matcher(res.body());
+            if (!m.find()) throw new IllegalStateException("No transfer id in response");
+            return m.group(1);
+        } catch (Exception e) {
+            log.warn("Failed to create transfer to {}: {}", linkedAccountId, e.getMessage());
+            return null;
+        }
+    }
+
+    /** Release a held transfer to the vendor (on_hold → 0). */
+    public boolean releaseTransfer(String transferId) {
+        if (transferId == null) return false;
+        if (!isLive()) {
+            log.info("[route dev-mode] released transfer {}", transferId);
+            return true;
+        }
+        try {
+            HttpRequest req = HttpRequest.newBuilder(URI.create(RAZORPAY_API + "/transfers/" + transferId))
+                    .header("Authorization", basicAuth())
+                    .header("Content-Type", "application/json")
+                    .method("PATCH", HttpRequest.BodyPublishers.ofString("{\"on_hold\":0}"))
+                    .build();
+            HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
+            return res.statusCode() / 100 == 2;
+        } catch (Exception e) {
+            log.warn("Failed to release transfer {}: {}", transferId, e.getMessage());
+            return false;
+        }
+    }
 
     /**
      * Create a payment order at the gateway and return its id.

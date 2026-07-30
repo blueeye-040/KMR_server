@@ -30,6 +30,10 @@ public class Shop {
     @Column(name = "is_official")
     private boolean isOfficial;
 
+    // Razorpay Route linked-account id (acc_XXX) for auto-settlement to this shop
+    @Column(name = "razorpay_account_id")
+    private String razorpayAccountId;
+
     @Column(name = "created_at", updatable = false)
     private java.time.OffsetDateTime createdAt;
 
@@ -48,6 +52,8 @@ public class Shop {
     public long getTotalSales() { return totalSales; }
     public boolean isApproved() { return approved; }
     public boolean isOfficial() { return isOfficial; }
+    public String getRazorpayAccountId() { return razorpayAccountId; }
+    public void setRazorpayAccountId(String v) { this.razorpayAccountId = v; }
 
     @PrePersist
     void prePersist() { this.createdAt = java.time.OffsetDateTime.now(); }
