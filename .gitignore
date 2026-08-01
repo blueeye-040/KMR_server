@@ -32,3 +32,10 @@ build/
 ### VS Code ###
 .vscode/
 .env
+
+# Secrets — never commit
+rush-valley-*.json
+*service-account*.json
+*-firebase-adminsdk-*.json
+rzp-*.csv
+*credentials*.csv
