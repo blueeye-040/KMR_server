@@ -51,11 +51,15 @@ jobs:
           script: |
             set -e
             REGISTRY="${{ steps.ecr.outputs.registry }}"
+            IMAGE="$REGISTRY/valleyrush-api:latest"
             # EC2 authenticates to ECR via its attached IAM role (no keys on the box).
             aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
               | docker login --username AWS --password-stdin "$REGISTRY"
-            cd /opt/valleyrush
-            export IMAGE="$REGISTRY/valleyrush-api:latest"
-            docker compose -f docker-compose.prod.yml pull
-            docker compose -f docker-compose.prod.yml up -d
+            docker pull "$IMAGE"
+            docker rm -f valleyrush-api 2>/dev/null || true
+            docker run -d --name valleyrush-api --restart always \
+              -p 8080:8080 \
+              --env-file "$HOME/.env" \
+              -v "$HOME/secrets/service.json:/app/service.json:ro" \
+              "$IMAGE"
             docker image prune -f

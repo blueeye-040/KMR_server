@@ -21,7 +21,7 @@ RUN chown -R app:app /app
 USER app
 
 EXPOSE 8080
-# Config (DB, AWS, Razorpay, FCM path, …) is supplied as environment variables at
-# runtime — never baked into the image. See deploy/docker-compose.prod.yml.
+# Config (DB, AWS, Razorpay, FCM path, …) is supplied at runtime via --env-file .env;
+# the Firebase JSON is bind-mounted (see deploy/run.sh). Nothing secret is baked in.
 ENV JAVA_OPTS="-XX:MaxRAMPercentage=75.0"
 ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/app.jar"]
