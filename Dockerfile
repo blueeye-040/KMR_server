@@ -3,11 +3,13 @@
 # ---- Build stage: compile the Spring Boot fat jar ----
 FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /build
-# Cache dependencies first (only re-downloads when pom.xml changes)
+# Resilient downloads: retry on the transient "premature end of content" errors that
+# the large firebase-admin dependency tree is prone to. A cached ~/.m2 (BuildKit
+# cache mount) makes rebuilds fast without the flaky dependency:go-offline step.
+ENV MAVEN_OPTS="-Dmaven.wagon.http.retryHandler.count=5 -Dmaven.wagon.http.retryHandler.requestSentEnabled=true"
 COPY pom.xml .
-RUN mvn -q -B dependency:go-offline
 COPY src ./src
-RUN mvn -q -B clean package -DskipTests
+RUN --mount=type=cache,target=/root/.m2 mvn -q -B -DskipTests clean package
 
 # ---- Runtime stage: slim JRE, non-root ----
 FROM eclipse-temurin:17-jre
