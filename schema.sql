@@ -136,6 +136,18 @@ CREATE TABLE order_items (
   quantity        INT           NOT NULL,
   price           DECIMAL(10,2) NOT NULL
 );
+create table banners (
+  id bigserial not null,
+  title character varying(200) null,
+  subtitle character varying(300) null,
+  image_url text null,
+  bg_color_hex character varying(7) null,
+  redirect_type character varying(50) null,
+  redirect_id bigint null,
+  sort_order integer null default 0,
+  active boolean null default true,
+  constraint banners_pkey primary key (id)
+);
 
 CREATE INDEX idx_products_category    ON products(category_id);
 CREATE INDEX idx_products_brand       ON products(brand_id);
@@ -747,3 +759,209 @@ CREATE INDEX idx_cart_user      ON cart(user_id);
 CREATE INDEX idx_wishlist_user  ON wishlist(user_id);
 CREATE INDEX idx_orders_user    ON orders(user_id);
 CREATE INDEX idx_addresses_user ON addresses(user_id);
+
+-- ============================================================
+-- Phase 2 — Reviews & product rating columns
+-- Run this block in Supabase after the schema above
+-- ============================================================
+
+-- Add rating summary columns to products for fast list display
+ALTER TABLE products
+  ADD COLUMN IF NOT EXISTS rating_avg   DECIMAL(3,2) DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS review_count INT          DEFAULT 0;
+
+-- Reviews table (one review per user per product)
+CREATE TABLE IF NOT EXISTS reviews (
+  id                BIGSERIAL    PRIMARY KEY,
+  product_id        BIGINT       NOT NULL REFERENCES products(id)    ON DELETE CASCADE,
+  user_id           BIGINT       NOT NULL REFERENCES users(id)       ON DELETE CASCADE,
+  shop_product_id   BIGINT       REFERENCES shop_products(id)        ON DELETE SET NULL,
+  rating            SMALLINT     NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  title             VARCHAR(200),
+  body              TEXT,
+  verified_purchase BOOLEAN      DEFAULT false,
+  helpful_count     INT          DEFAULT 0,
+  created_at        TIMESTAMPTZ  DEFAULT NOW(),
+  UNIQUE(user_id, product_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_reviews_product ON reviews(product_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_reviews_user    ON reviews(user_id);
+CREATE INDEX IF NOT EXISTS idx_reviews_rating  ON reviews(product_id, rating);
+
+-- Trigger: keep rating_avg + review_count in sync automatically
+CREATE OR REPLACE FUNCTION update_product_rating()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  UPDATE products
+  SET rating_avg   = (SELECT COALESCE(AVG(rating), 0) FROM reviews WHERE product_id = COALESCE(NEW.product_id, OLD.product_id)),
+      review_count = (SELECT COUNT(*)                  FROM reviews WHERE product_id = COALESCE(NEW.product_id, OLD.product_id))
+  WHERE id = COALESCE(NEW.product_id, OLD.product_id);
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_update_product_rating ON reviews;
+CREATE TRIGGER trg_update_product_rating
+  AFTER INSERT OR UPDATE OR DELETE ON reviews
+  FOR EACH ROW EXECUTE FUNCTION update_product_rating();
+
+-- ============================================================
+-- Phase 3 — KMR Official Store
+-- Run this block in Supabase after Phase 2
+-- ============================================================
+
+-- Mark shops that are owned by the platform itself
+ALTER TABLE shops ADD COLUMN IF NOT EXISTS is_official BOOLEAN DEFAULT false;
+
+-- Insert KMR Store as the platform's own shop (id = 5)
+INSERT INTO shops (id, name, owner_name, city, logo_url, tagline, rating, total_sales, is_official, approved)
+VALUES (5, 'KMR Store', 'KMR Marketplace', 'Chennai',
+        'https://picsum.photos/seed/shop-kmr/100/100',
+        'KMR Official Marketplace Store', 5.0, 100000, true, true)
+ON CONFLICT (id) DO UPDATE
+  SET name = EXCLUDED.name, is_official = EXCLUDED.is_official,
+      tagline = EXCLUDED.tagline, rating = EXCLUDED.rating;
+
+SELECT setval('shops_id_seq', (SELECT MAX(id) FROM shops));
+
+-- KMR Store pricing — competitive with guaranteed 1-day delivery
+INSERT INTO shop_products (shop_id, product_id, mrp, selling_price, discount_percent, stock, delivery_days, available) VALUES
+-- Electronics
+(5,  1, 1299,   929, 29, 500, 1, true),   -- boAt Airdopes 141
+(5,  3, 5999,  4299, 28, 200, 1, true),   -- JBL Tune 760NC
+(5,  6, 19900, 16799, 16, 100, 1, true),  -- Apple AirPods 3
+(5, 10, 2299,  1699, 26, 300, 1, true),   -- OnePlus Nord Buds 2
+(5, 14, 5999,  3699, 38, 300, 1, true),   -- Amazon Fire TV Stick 4K
+-- Mobiles
+(5, 16, 29999, 24299, 19, 200, 1, true),  -- Samsung Galaxy A35 5G
+(5, 17, 74999, 63999, 15,  80, 1, true),  -- Samsung Galaxy S24
+(5, 18, 79900, 71499, 11,  60, 1, true),  -- iPhone 15
+(5, 19, 89900, 80299, 11,  50, 1, true),  -- iPhone 16
+(5, 22, 27999, 21499, 23, 150, 1, true),  -- Redmi Note 14 Pro
+(5, 23, 24999, 20499, 18, 120, 1, true),  -- POCO X7 Pro
+-- Laptops
+(5, 26, 114900, 106999, 7,  60, 1, true), -- MacBook Air M3
+(5, 28,  70990, 53999, 24,  80, 1, true), -- Dell Inspiron 15
+(5, 34,  99990, 80499, 20,  40, 1, true), -- Lenovo Legion 5
+(5, 35, 129990, 108999, 16, 30, 1, true), -- ASUS ROG Strix G16
+-- Fashion
+(5, 47, 5999,  3799, 37, 200, 1, true),   -- Puma Shoes
+(5, 48, 14999, 10799, 28, 100, 1, true)   -- Adidas Ultraboost
+ON CONFLICT (shop_id, product_id) DO NOTHING;
+
+-- rest
+
+
+-- ============================================================
+-- Phase 4 — Orders & Payments (checkout spine)
+-- Applied to Supabase 2026-07-26
+-- ============================================================
+ALTER TABLE orders      ADD COLUMN IF NOT EXISTS razorpay_order_id   VARCHAR(80);
+ALTER TABLE orders      ADD COLUMN IF NOT EXISTS razorpay_payment_id VARCHAR(80);
+ALTER TABLE order_items ADD COLUMN IF NOT EXISTS status VARCHAR(40) DEFAULT 'PLACED';
+CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);
+CREATE INDEX IF NOT EXISTS idx_order_items_shop  ON order_items(shop_id);
+CREATE INDEX IF NOT EXISTS idx_orders_status     ON orders(status);
+
+-- ============================================================
+-- Phase 5 — Category taxonomy (departments) + search support
+-- Applied to Supabase 2026-07-26
+-- ============================================================
+ALTER TABLE categories ADD COLUMN IF NOT EXISTS parent_id  BIGINT REFERENCES categories(id);
+ALTER TABLE categories ADD COLUMN IF NOT EXISTS sort_order INT DEFAULT 0;
+
+-- Rename leaf 1 to reflect its catalog (earbuds/headphones/speakers/streaming)
+UPDATE categories SET name='Audio & Video', emoji='🎧' WHERE id=1;
+
+-- Departments (top level, parent_id NULL)
+INSERT INTO categories (id,name,emoji,color_hex,active,sort_order) VALUES
+ (12,'Electronics','🔌','#2563EB',true,1),
+ (13,'Home & Appliances','🏠','#F59E0B',true,2),
+ (14,'Fashion','👗','#EF4444',true,3),
+ (15,'Grocery & Essentials','🛒','#10B981',true,4)
+ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, emoji=EXCLUDED.emoji,
+  color_hex=EXCLUDED.color_hex, sort_order=EXCLUDED.sort_order, parent_id=NULL;
+
+-- Assign leaf categories to departments
+UPDATE categories SET parent_id=12, sort_order=1 WHERE id=1;   -- Audio & Video
+UPDATE categories SET parent_id=12, sort_order=2 WHERE id=2;   -- Mobiles
+UPDATE categories SET parent_id=12, sort_order=3 WHERE id=3;   -- Laptops
+UPDATE categories SET parent_id=13, sort_order=1 WHERE id=4;   -- Appliances
+UPDATE categories SET parent_id=13, sort_order=2 WHERE id=10;  -- Cleaning Essentials
+UPDATE categories SET parent_id=14, sort_order=1 WHERE id=5;   -- Fashion
+UPDATE categories SET parent_id=15, sort_order=1 WHERE id=6;   -- Dairy & Eggs
+UPDATE categories SET parent_id=15, sort_order=2 WHERE id=7;   -- Atta, Rice & Staples
+UPDATE categories SET parent_id=15, sort_order=3 WHERE id=8;   -- Beverages
+UPDATE categories SET parent_id=15, sort_order=4 WHERE id=9;   -- Snacks & Munchies
+UPDATE categories SET parent_id=15, sort_order=5 WHERE id=11;  -- Personal Care
+SELECT setval('categories_id_seq', (SELECT MAX(id) FROM categories));
+
+-- ============================================================
+-- Phase 6 — Coupons, support tickets, device tokens, profile
+-- Applied to Supabase 2026-07-27
+-- ============================================================
+CREATE TABLE IF NOT EXISTS coupons (
+  id             BIGSERIAL PRIMARY KEY,
+  code           VARCHAR(40) NOT NULL UNIQUE,
+  description    VARCHAR(200),
+  type           VARCHAR(20) NOT NULL,            -- FLAT | PERCENT
+  value          DECIMAL(10,2) NOT NULL,
+  min_cart_value DECIMAL(10,2) DEFAULT 0,
+  max_discount   DECIMAL(10,2),                   -- cap for PERCENT
+  active         BOOLEAN DEFAULT true,
+  expires_at     TIMESTAMPTZ,
+  usage_limit    INT,
+  used_count     INT DEFAULT 0,
+  created_at     TIMESTAMPTZ DEFAULT NOW()
+);
+INSERT INTO coupons (code, description, type, value, min_cart_value, max_discount, expires_at) VALUES
+  ('KMR100',   'Flat Rs.100 off on orders above Rs.999', 'FLAT',    100, 999,  NULL, NOW() + INTERVAL '90 days'),
+  ('SAVE10',   '10% off up to Rs.500 above Rs.1499',      'PERCENT',  10, 1499, 500,  NOW() + INTERVAL '90 days'),
+  ('WELCOME50','Flat Rs.50 off, no minimum',              'FLAT',     50, 0,    NULL, NOW() + INTERVAL '90 days')
+ON CONFLICT (code) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS support_tickets (
+  id         BIGSERIAL PRIMARY KEY,
+  user_id    BIGINT REFERENCES users(id) ON DELETE CASCADE,
+  order_id   BIGINT REFERENCES orders(id) ON DELETE SET NULL,
+  type       VARCHAR(20) NOT NULL DEFAULT 'ISSUE',   -- ISSUE | RETURN | EXCHANGE
+  subject    VARCHAR(200) NOT NULL,
+  message    TEXT,
+  status     VARCHAR(20) DEFAULT 'OPEN',             -- OPEN | IN_PROGRESS | RESOLVED
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_support_user ON support_tickets(user_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS device_tokens (
+  id         BIGSERIAL PRIMARY KEY,
+  user_id    BIGINT REFERENCES users(id) ON DELETE CASCADE,
+  token      VARCHAR(300) NOT NULL UNIQUE,
+  platform   VARCHAR(20),                            -- ANDROID | IOS
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_device_user ON device_tokens(user_id);
+
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(40);
+
+-- ============================================================
+-- Phase 7 — Vendor settlements (Razorpay Route) + auth security
+-- Applied to Supabase 2026-07-30
+-- ============================================================
+ALTER TABLE shops ADD COLUMN IF NOT EXISTS razorpay_account_id VARCHAR(60);
+
+CREATE TABLE IF NOT EXISTS settlements (
+  id                   BIGSERIAL PRIMARY KEY,
+  order_id             BIGINT REFERENCES orders(id) ON DELETE CASCADE,
+  shop_id              BIGINT REFERENCES shops(id),
+  amount               DECIMAL(10,2) NOT NULL,
+  mode                 VARCHAR(10),          -- HOLD | SPOT
+  status               VARCHAR(20) DEFAULT 'PENDING',
+                       -- PENDING | HELD | RELEASED | SETTLED | CANCELLED | FAILED
+  razorpay_transfer_id VARCHAR(60),
+  created_at           TIMESTAMPTZ DEFAULT NOW(),
+  released_at          TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_settlements_order ON settlements(order_id);
+CREATE INDEX IF NOT EXISTS idx_settlements_shop  ON settlements(shop_id, status);

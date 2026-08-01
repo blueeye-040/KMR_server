@@ -1,8 +1,6 @@
 package com.kmr.marketplace.controller;
 
-import com.kmr.marketplace.dto.AuthResponse;
-import com.kmr.marketplace.dto.LoginRequest;
-import com.kmr.marketplace.dto.RegisterRequest;
+import com.kmr.marketplace.dto.*;
 import com.kmr.marketplace.entity.User;
 import com.kmr.marketplace.security.JwtService;
 import com.kmr.marketplace.security.TokenBlacklistService;
@@ -39,6 +37,33 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    /** Send a confirmation code to the user's email during sign-up. */
+    @PostMapping("/send-email-otp")
+    public ResponseEntity<Map<String, String>> sendEmailOtp(@Valid @RequestBody EmailOtpRequest req) {
+        authService.sendEmailOtp(req.email());
+        return ResponseEntity.ok(Map.of("message", "Confirmation code sent to " + req.email()));
+    }
+
+    @PostMapping("/verify-email-otp")
+    public ResponseEntity<Map<String, String>> verifyEmailOtp(@Valid @RequestBody VerifyEmailRequest req) {
+        authService.verifyEmailOtp(req.email(), req.otp());
+        return ResponseEntity.ok(Map.of("message", "Email verified successfully"));
+    }
+
+    /** Start a password reset — sends a code to the account's email or phone. */
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Map<String, String>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest req) {
+        authService.forgotPassword(req.identifier());
+        return ResponseEntity.ok(Map.of("message",
+                "If an account exists, a reset code has been sent."));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, String>> resetPassword(@Valid @RequestBody ResetPasswordRequest req) {
+        authService.resetPassword(req.identifier(), req.otp(), req.newPassword());
+        return ResponseEntity.ok(Map.of("message", "Password reset successfully. Please log in."));
     }
 
     @PostMapping("/logout")

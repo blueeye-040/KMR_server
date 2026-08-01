@@ -21,9 +21,14 @@ public class SmsService {
     }
 
     public void sendOtp(String phone, String otp) {
+        sendText(phone, "Your Valley Rush OTP is: " + otp + ". Valid for 5 minutes. Do not share.");
+    }
+
+    /** Send an arbitrary transactional SMS (OTP, reset code, order updates). */
+    public void sendText(String phone, String message) {
         if (devMode) {
             System.out.println("============================================");
-            System.out.println("  [DEV] OTP for " + phone + " → " + otp);
+            System.out.println("  [DEV] SMS to " + phone + " → " + message);
             System.out.println("============================================");
             return;
         }
@@ -32,7 +37,7 @@ public class SmsService {
 
         snsClient.publish(PublishRequest.builder()
                 .phoneNumber(e164)
-                .message("Your KMR OTP is: " + otp + ". Valid for 5 minutes. Do not share.")
+                .message(message)
                 .messageAttributes(Map.of(
                         "AWS.SNS.SMS.SMSType",
                         MessageAttributeValue.builder()
