@@ -39,3 +39,6 @@ rush-valley-*.json
 *-firebase-adminsdk-*.json
 rzp-*.csv
 *credentials*.csv
+
+**/.DS_Store
+.DS_Store

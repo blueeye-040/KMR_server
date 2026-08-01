@@ -1,7 +1,6 @@
 package com.kmr.marketplace.entity;
 
 import jakarta.persistence.*;
-import java.math.BigDecimal;
 import java.time.Instant;
 
 @Entity

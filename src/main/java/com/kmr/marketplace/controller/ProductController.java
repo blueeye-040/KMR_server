@@ -1,22 +1,13 @@
 package com.kmr.marketplace.controller;
 
 import com.kmr.marketplace.dto.*;
-import com.kmr.marketplace.entity.Product;
-import com.kmr.marketplace.entity.ShopProduct;
-import com.kmr.marketplace.repository.ProductRepository;
-import com.kmr.marketplace.repository.ShopProductRepository;
 import com.kmr.marketplace.service.ProductDetailService;
 import com.kmr.marketplace.service.ProductService;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.*;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api")
