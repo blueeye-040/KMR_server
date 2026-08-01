@@ -1,0 +1,23 @@
+# Keep the build context small and secrets out of the image
+target/
+.git/
+.github/
+.idea/
+.vscode/
+.mvn/
+docs/
+deploy/
+*.iml
+HELP.md
+compose.yaml
+mvnw
+mvnw.cmd
+**/.DS_Store
+
+# Secrets — never send to the build context
+.env
+rush-valley-*.json
+*service-account*.json
+*-firebase-adminsdk-*.json
+rzp-*.csv
+*credentials*.csv

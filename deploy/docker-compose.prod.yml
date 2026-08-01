@@ -1,0 +1,25 @@
+# Runs the Valley Rush API on the EC2 host from the image in ECR.
+# Lives at /opt/valleyrush/docker-compose.prod.yml on the server, alongside:
+#   /opt/valleyrush/.env            — all secrets/config (DB, AWS, Razorpay, MAIL_FROM, …)
+#   /opt/valleyrush/secrets/fcm.json — the Firebase service-account JSON
+# The CI/CD pipeline sets IMAGE to the freshly-pushed ECR image and runs
+#   docker compose -f docker-compose.prod.yml pull && up -d
+services:
+  api:
+    image: ${IMAGE:-valleyrush-api:latest}
+    container_name: valleyrush-api
+    restart: always
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      # Point the app at the mounted service-account file (overrides any .env value).
+      - FCM_SERVICE_ACCOUNT_JSON=/app/secrets/fcm.json
+    volumes:
+      - ./secrets/fcm.json:/app/secrets/fcm.json:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
